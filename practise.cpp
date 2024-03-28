@@ -1,12 +1,321 @@
 #include "iostream"
 #include "vector"
+#include "math.h"
+#include "string"
 
 #include "opencv2/opencv.hpp"
+#include "opencv2/face.hpp"
+#include "opencv2/opencv.hpp"
+#include "opencv2/highgui.hpp"
+#include "opencv2/imgcodecs.hpp"
 #include "opencv2/imgproc.hpp"
+
+// https://docs.opencv.org/3.4/da/d54/group__imgproc__transform.html
+
+
+/*
+
+int main()
+{
+    std::vector<cv::String> files;
+    cv::glob("chess_images/*.png", files, true);
+    cv::Size patternSize = cv::Size(25 - 1, 18 - 1);
+
+    std::vector<std::vector<cv::Point2f>> q(files.size());
+    std::vector<std::vector<cv::Point3f>> Q;
+
+    int checkBoard[2] = {25, 18};
+    int fieldSize = 15;
+
+    std::vector<cv::Point3f> objP;
+
+    for (size_t i = 0; i < checkBoard[1]; i++) // Corrected the loop termination condition
+    {
+        for (size_t j = 0; j < checkBoard[0]; j++) // Corrected the inner loop variable name
+        {
+            objP.push_back(cv::Point3f(fieldSize * j, fieldSize * i, 0.0f)); // Corrected the Point3f initialization
+        }
+    }
+
+    std::vector<cv::Point2f> imgPoint;
+
+    for (size_t i = 0; i < files.size(); i++) // Changed to use size_t and fixed the loop termination condition
+    {
+        std::cout << std::string(files[i]) << std::endl;
+
+        cv::Mat img = cv::imread(files[i]);
+
+        cv::Mat grayImg;
+        cv::cvtColor(img, grayImg, cv::COLOR_BGR2GRAY); // Changed COLOR_RGB2GRAY to COLOR_BGR2GRAY
+
+        bool patternFound = cv::findChessboardCorners(grayImg, patternSize, q[i], cv::CALIB_CB_ADAPTIVE_THRESH + cv::CALIB_CB_NORMALIZE_IMAGE);
+
+        if (patternFound)
+        {
+            cv::cornerSubPix(grayImg, q[i], cv::Size(11, 11), cv::Size(-1, -1), cv::TermCriteria(cv::TermCriteria::EPS + cv::TermCriteria::MAX_ITER, 30, 0.1));
+            Q.push_back(objP);
+        }
+
+        cv::drawChessboardCorners(img, patternSize, q[i], patternFound);
+
+        cv::imshow("img", img);
+        cv::waitKey(0);
+    }
+
+    cv::Matx33f K(cv::Matx33f::eye());  // Fixed the initialization of intrinsic camera matrix
+    cv::Vec<float, 5> k(0, 0, 0, 0, 0); // Fixed the initialization of distortion coefficients
+    std::vector<cv::Mat> rvecs, tvecs;  // Fixed the vector type
+    std::vector<double> perViewErrors;  // Removed stdIntrinsics and stdExtrinsics as they are unused
+    int flags = cv::CALIB_FIX_ASPECT_RATIO + cv::CALIB_FIX_K3 +
+                cv::CALIB_ZERO_TANGENT_DIST + cv::CALIB_FIX_PRINCIPAL_POINT;
+    cv::Size frameSize(1440, 1080);
+    std::cout << "Calibrating..." << std::endl;
+    float error = cv::calibrateCamera(Q, q, frameSize, K, k, rvecs, tvecs, flags); // Changed the order of Q and q
+    std::cout << "Reprojection error = " << error << "\nK =\n"
+              << K << "\nk=\n"
+              << k << std::endl;
+
+    cv::Mat mapx, mapy;
+    cv::initUndistortRectifyMap(K, k, cv::Mat(), K, frameSize, CV_32FC1, mapx, mapy); // Fixed the initialization of rectification maps
+
+    for (auto const &f : files)
+    {
+        std::cout << std::string(f) << std::endl;
+        cv::Mat img = cv::imread(f, cv::IMREAD_COLOR);
+        cv::Mat imgUndistorted;
+        cv::remap(img, imgUndistorted, mapx, mapy, cv::INTER_LINEAR);
+        cv::imshow("undistorted image", imgUndistorted);
+        cv::waitKey(0);
+    }
+
+    return 0;
+}
+
+*/
+/*
+int main()
+{
+    // video capture from camera
+    cv::VideoCapture cap(0,0);
+    cv::Mat frame;
+
+    while (true)
+    {
+        cap >> frame;
+        cv::imshow("frame", frame);
+        if (cv::waitKey(1) == 27)
+        {
+            break;
+        }
+    }
+
+    return 0;
+}
+*/
+
+/*
+// https://www.youtube.com/watch?v=gpu9p3d53fg&list=PLkmvobsnE0GHMmTF7GTzJnCISue1L9fJn&index=10
+int main()
+{
+    cv::Mat image = cv::imread("image.png");
+
+    cv::Mat histogram;
+
+    int histSize = 256;
+    const int channels[] = {0, 1, 2};
+    float range[] = {0.0, 256.0};
+    const float *histRange[] = {range};
+
+    cv::calcHist(&image, 1, channels, cv::Mat(), histogram, 1, &histSize, histRange);
+    cv::normalize(histogram, histogram, 0, 255, cv::NORM_MINMAX, -1, cv::Mat());
+
+    cv::imshow("image", image);
+    cv::imshow("histogram", histogram);
+
+    cv::waitKey(0);
+}
+
+*/
+
+/*
 
 int main()
 {
     cv::Mat img = cv::imread("image.png");
+
+    cv::Mat dst;
+
+    cv::getRectSubPix(img, cv::Size(100, 100), cv::Point(500, 450), dst);
+
+    cv::Rect roi(298, 298, 5, 5);
+    cv::Mat roi_dst = img(roi);
+
+    cv::imshow("dst", dst);
+    cv::imshow("roi_dst", roi_dst);
+    cv::waitKey(0);
+
+}
+
+*/
+
+/*
+using namespace cv;
+
+int main() {
+    // Create a black image
+    int width = 500;
+    int height = 500;
+    Mat image(height, width, CV_8UC3, Scalar(0, 0, 0));
+
+    // Center of the image
+    Point center(width / 2, height / 2);
+
+    // Radius of the circle
+    int radius = height / 2;
+
+    // Draw the rainbow circle
+    for (int i = 0; i < 360; ++i) {
+        // Convert angle to radians
+        double angle = i * CV_PI / 180;
+
+        // Calculate color
+        Scalar color;
+        if (i < 60) {
+            color = Scalar(0, 0, 255); // Red
+        } else if (i < 120) {
+            color = Scalar(0, 255, 255); // Yellow
+        } else if (i < 180) {
+            color = Scalar(0, 255, 0); // Green
+        } else if (i < 240) {
+            color = Scalar(255, 255, 0); // Cyan
+        } else if (i < 300) {
+            color = Scalar(255, 0, 0); // Blue
+        } else {
+            color = Scalar(255, 0, 255); // Magenta
+        }
+
+        // Polar to Cartesian coordinates
+        int x = center.x + radius * cos(angle);
+        int y = center.y + radius * sin(angle);
+
+        // Draw the point
+        circle(image, Point(x, y), 1, color, FILLED);
+    }
+
+    // Display the image
+    imshow("Rainbow Circle", image);
+    waitKey(0);
+    destroyAllWindows();
+
+    return 0;
+}
+
+*/
+
+/*
+int main()
+{
+    cv::Mat _img = cv::imread("image.png");
+
+    cv::Mat _dst = cv::Mat::zeros(_img.size(), _img.type());
+    cv::Mat map_x = cv::Mat::zeros(_img.size(), CV_32FC1);
+    cv::Mat map_y = cv::Mat::zeros(_img.size(), CV_32FC1);
+
+    for (int i = 0; i < _img.rows; i++)
+    {
+        for (int j = 0; j < _img.cols; j++)
+        {
+            map_x.at<float>(i, j) = static_cast<float>(_img.cols - i);
+            map_y.at<float>(i, j) = static_cast<float>(_img.rows - j);
+        }
+    }
+
+    cv::remap(_img, _dst, map_x, map_y, cv::INTER_LINEAR, cv::BORDER_CONSTANT, cv::Scalar(0,0,0));
+
+    map_x.convertTo(map_x, CV_8UC1);
+    map_y.convertTo(map_y, CV_8UC1);
+
+    cv::imshow("img", _img);
+    cv::imshow("dst", _dst);
+
+    cv::imshow("map_x", map_x);
+    cv::imshow("map_y", map_y);
+
+    cv::waitKey(0);
+}
+
+*/
+/*
+int main()
+{
+    cv::Mat _16sc2Mat = cv::Mat::zeros(cv::Size(5, 5), CV_32FC1);
+    cv::Mat _16uc1Mat = cv::Mat::zeros(cv::Size(5, 5), CV_32FC1);
+
+    cv::Mat out2 = cv::Mat::zeros(cv::Size(480, 480), CV_16SC2);
+    cv::Mat out1 = cv::Mat::zeros(cv::Size(480, 480), CV_16SC1);
+
+    // _16sc2Mat.at<cv::Vec3s>(0, 0)[0] = 255;
+    _16sc2Mat.at<float>(cv::Point(0, 4)) = 8.1;
+    _16sc2Mat.at<float>(cv::Point(0, 3)) = 5.8;
+    _16uc1Mat.at<float>(cv::Point(1, 3)) = 3.4;
+
+    cv::convertMaps(_16sc2Mat, _16sc2Mat, out1, out2, CV_16SC2);
+}
+
+CV_8U - 8-bit unsigned integers ( 0..255 )
+CV_85 - 8-bit signed integers (-128.. 127 )
+CV_16U - 16-bit unsigned integers ( 0..65535 )
+CV_165 -
+16-bit signed integers (-32768..32767 )
+CV_
+32S
+32-bit signed integers (-2147483648.. 2147483647 )
+CV_32F -
+32-bit floating-point numbers ( -FLT_MAX.. FLT_MAX, INF, NAN)
+CV
+64F - 64-bit floating-point numbers (-DBL_MAX. DBL_MAX, INF, NAN)
+int main()
+{
+    cv::Mat _8uc1 = cv::Mat::ones(cv::Size(3, 4), CV_8UC1);
+
+    std::cout << _8uc1 << std::endl;
+
+    std::cout << _8uc1.depth() << std::endl;
+    std::cout << _8uc1.channels() << std::endl;
+    std::cout << _8uc1.cols  << std::endl;
+}
+*/
+
+/*
+int main()
+{
+    cv::Mat img = cv::Mat(480, 480, CV_8UC3, cv::Scalar(0, 0, 0));
+
+    cv::namedWindow("img", cv::WINDOW_NORMAL);
+    cv::resizeWindow("img", 480, 480);
+
+    for (int i = 0; i < img.rows; i++)
+    {
+        for (int j = 0; j < img.cols; j++)
+        {
+            img.at<cv::Vec3b>(i, j)[0] = 255;
+            img.at<cv::Vec3b>(i, j)[1] = 255;
+            img.at<cv::Vec3b>(i, j)[2] = random() % 256;
+        }
+    }
+
+    cv::imshow("img", img);
+    cv::resize(img, img, cv::Size(480, 480));
+    cv::waitKey(0);
+
+    return EXIT_SUCCESS;
+}
+
+
+int main()
+{
+    cv::Mat img = cv::imread("image.png");
+    cv::resize(img, img, cv::Size(480, 480));
 
     std::vector<cv::Mat> bgr_planes;
     cv::split(img, bgr_planes);
@@ -52,9 +361,7 @@ int main()
     cv::imshow("Histogram", histImage);
 
     cv::waitKey(0);
-}
-
-/*
+};
 
 int main()
 {
