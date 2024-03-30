@@ -12,6 +12,196 @@
 
 // https://docs.opencv.org/3.4/da/d54/group__imgproc__transform.html
 
+// STERIO VISION
+
+class SterioVision
+{
+public:
+    SterioVision(float baseline, float alpha, float focalLength) : baseline(baseline), alpha(alpha), focalLength(focalLength) {}
+
+    // Callibrate the frames
+    void undistortFrame(cv::Mat &frame);
+
+    // Add HSV filter
+    cv::Mat addHSVFilter(cv::Mat &frame, int camera);
+
+    // find the circle in the frame - only find the largest one - reduce false positives
+    cv::Point findCircle(cv::Mat &frame, cv::Mat &mask);
+
+    // calculate the depth
+    float calulateDepth(cv::Point circleLeft, cv::Point circleRight, cv::Mat &leftFrame, cv::Mat &rightFrame);
+
+private:
+    float baseline = 0.0f;
+    float alpha = 0.0f;
+    float focalLength = 0.0f;
+};
+
+void SterioVision::undistortFrame(cv::Mat &frame)
+{
+    cv::undistort(frame, frame, focalLength, baseline);
+    cv::cvtColor(frame, frame, cv::COLOR_BGR2GRAY);
+    cv::GaussianBlur(frame, frame, cv::Size(5, 5), 0, 0);
+    cv::equalizeHist(frame, frame);
+    cv::cvtColor(frame, frame, cv::COLOR_GRAY2BGR);
+    cv::resize(frame, frame, cv::Size(480, 480));
+    cv::imshow("undistorted", frame);
+    cv::waitKey(0);
+}
+
+cv::Mat SterioVision::addHSVFilter(cv::Mat &frame, int camera)
+{
+    cv::GaussianBlur(frame, frame, cv::Size(5, 5), 0, 0);
+    cv::cvtColor(frame, frame, cv::COLOR_BGR2HSV);
+
+    cv::Mat mask;
+
+    std::vector<int> lowerLimitRight = {60, 110, 50};
+    std::vector<int> uppweLimitRight = {255, 255, 255};
+    std::vector<int> lowerLimitLeft = {140, 110, 50};
+    std::vector<int> upperLimitLeft = {255, 255, 255};
+
+    if (camera == 1)
+    {
+        cv::inRange(frame, lowerLimitRight, uppweLimitRight, mask);
+    }
+    else
+    {
+        cv::inRange(frame, lowerLimitLeft, upperLimitLeft, mask);
+    };
+
+    cv::erode(mask, mask, (3, 3));
+    cv::dilate(mask, mask, (3, 3));
+
+    return mask;
+};
+
+cv::Point SterioVision::findCircle(cv::Mat &frame, cv::Mat &mask)
+{
+    std::vector<std::vector<cv::Point>> contours;
+
+    cv::findContours(mask, contours, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_SIMPLE);
+
+    // find the bigger contour
+    std::sort(contours.begin(), contours.end(), [](const std::vector<cv::Point> &a, const std::vector<cv::Point> &b)
+              { return cv::contourArea(a) > cv::contourArea(b); });
+
+    if (contours.size() > 0)
+    {
+        std::vector<cv::Point> largetContour = contours[contours.size() - 1];
+
+        cv::Point2f center;
+        float radius;
+
+        cv::minEnclosingCircle(largetContour, center, radius);
+        cv::Moments moments = cv::moments(largetContour);
+        cv::Point centerOfMass = cv::Point(moments.m10 / moments.m00, moments.m01 / moments.m00);
+
+        if (radius > 10)
+        {
+            cv::circle(frame, centerOfMass, 3, cv::Scalar(0, 255, 0), -1, 8, 0);
+            cv::circle(frame, center, (int)radius, cv::Scalar(0, 255, 0), 3, 8, 0);
+            cv::putText(frame, std::to_string(radius), center, cv::FONT_HERSHEY_SIMPLEX, 1, cv::Scalar(0, 255, 0), 2);
+        };
+
+        return centerOfMass;
+    };
+};
+
+float SterioVision::calulateDepth(cv::Point circleLeft, cv::Point circleRight, cv::Mat &leftFrame, cv::Mat &rightFrame)
+{
+    int focalPixels = 0;
+
+    if (rightFrame.cols == leftFrame.cols)
+    {
+        focalPixels = (rightFrame.cols * 0.5) / (tan(alpha * CV_PI / 180));
+    }
+    else
+    {
+        std::cout << "ERROR: left and right frames have different sizes" << std::endl;
+    };
+
+    int xLeft = circleLeft.x;
+    int xRight = circleRight.x;
+
+    int disparity = xLeft - xRight;
+
+    float zDepth = (float(focalPixels) * baseline) / float(disparity);
+
+    return abs(zDepth);
+};
+
+int main()
+{
+
+    float baseline = 7.0f;
+    float alpha = 6.0f;
+    float focalLength = 56.0f;
+
+    cv::Mat leftFrame, rightFrame;
+    cv::VideoCapture capRight(1);
+    cv::VideoCapture capLeft(0);
+
+    SterioVision sterioVision(baseline, alpha, focalLength);
+
+    if (!capRight.isOpened() || !capLeft.isOpened())
+    {
+        std::cout << "Could not open the video device" << std::endl;
+        return -1;
+    };
+
+    cv::Mat leftMask, rightMask;
+    cv::Mat leftResFrame, rightResFrame;
+    cv::Point leftCircle, rightCircle;
+
+    float depth = 0;
+
+    while (true)
+    {
+        capLeft.read(leftFrame);
+        capRight.read(rightFrame);
+
+        leftMask = sterioVision.addHSVFilter(leftFrame, 1);
+        rightMask = sterioVision.addHSVFilter(rightFrame, 2);
+
+        cv::bitwise_and(leftFrame, leftFrame, leftResFrame, leftMask);
+        cv::bitwise_and(rightFrame, rightFrame, rightResFrame, rightMask);
+
+        leftCircle = sterioVision.findCircle(leftResFrame, leftMask);
+        rightCircle = sterioVision.findCircle(rightResFrame, rightMask);
+
+        if(!leftCircle.x || !rightCircle.x)
+        {
+            cv::putText(leftFrame, "No Circle", cv::Point(75, 50), cv::FONT_HERSHEY_SIMPLEX, 1, cv::Scalar(0, 255, 0), 2);
+            cv::putText(rightFrame, "No Circle", cv::Point(75, 50), cv::FONT_HERSHEY_SIMPLEX, 1, cv::Scalar(0, 255, 0), 2);
+        }
+        else
+        {
+            depth = sterioVision.calulateDepth(leftCircle, rightCircle, leftFrame, rightFrame);
+            std::cout << "depth" << depth << std::endl;
+
+            cv::putText(leftFrame, std::to_string(depth), cv::Point(75, 50), cv::FONT_HERSHEY_SIMPLEX, 1, cv::Scalar(0, 255, 0), 2);
+            cv::putText(rightFrame, std::to_string(depth), cv::Point(75, 50), cv::FONT_HERSHEY_SIMPLEX, 1, cv::Scalar(0, 255, 0), 2);
+        };
+
+        cv::imshow("leftFrame", leftFrame);
+        cv::imshow("rightFrame", rightFrame);
+        cv::imshow("leftMask", leftMask);
+        cv::imshow("rightMask", rightMask);
+
+        if ((char) cv::waitKey(1) == 'x')
+        {
+            break;
+        };
+    };
+
+    capLeft.release();
+    capRight.release();
+
+    cv::destroyAllWindows();
+
+    return EXIT_SUCCESS;
+};
 
 /*
 
