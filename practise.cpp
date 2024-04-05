@@ -12,13 +12,20 @@
 
 // https://docs.opencv.org/3.4/da/d54/group__imgproc__transform.html
 
+
+int main()
+{
+    
+}
+
+/*
 int main()
 {
     // EDGE DETTECTION - CANNY / SOBEL
 
     cv::Mat img, gray, blurred, edge;
 
-    img = cv::imread("image.jpeg");
+    img = cv::imread("image.png");
 
     cv::cvtColor(img, gray, cv::COLOR_BGR2GRAY);
 
@@ -45,6 +52,7 @@ int main()
 
 }
 
+*/
 /*
 
 // Line / Circle Detection -- Hough Transform
@@ -86,7 +94,7 @@ int main()
         cv::line(detectImgLines, pt1, pt2, cv::Scalar(0, 0, 255), 3, cv::LINE_AA);
     };
 
-    /*
+    
     cv::imshow("imgLines", imgLines);
     cv::imshow("detectImgLines", detectImgLines);
 
@@ -142,12 +150,8 @@ cv::imshow("detectImgCircles", detectImgCircles);
 cv::waitKey(0);
 
 return EXIT_SUCCESS;
-}
-;
+};
 
-* /
-
-    /*
 
     int main()
     {
