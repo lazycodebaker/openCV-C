@@ -1,1 +1,1 @@
-g++ -std=c++17 -o main practise.cpp -I/opt/homebrew/Cellar/opencv/4.9.0_3/include/opencv4 -L/opt/homebrew/Cellar/opencv/4.9.0_3/lib -lopencv_core -lopencv_highgui -lopencv_imgproc -lopencv_imgcodecs -lopencv_ml -lopencv_face && ./main && rm -rf ./main
+g++ $(pkg-config --cflags --libs opencv4) -std=c++17 -o main practise.cpp -I/opt/homebrew/Cellar/opencv/4.9.0_3/include/opencv4 -L/opt/homebrew/Cellar/opencv/4.9.0_3/lib -lopencv_core -lopencv_highgui -lopencv_imgproc -lopencv_imgcodecs -lopencv_ml -lopencv_face && ./main && rm -rf ./main
